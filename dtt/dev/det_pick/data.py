@@ -22,7 +22,10 @@ def get_from_DiTing(part=None, key=None, h5file_path=''):
     with h5py.File(h5file_path + 'DiTing330km_part_{}.hdf5'.format(part), 'r') as f:
         dataset = f.get('earthquake/'+str(key))    
         data = np.array(dataset).astype(np.float32)
-
+        up_sample_data = np.zeros([data.shape[0]*2, data.shape[1]])
+        for chdx in range(data.shape[1]):
+            up_sample_data[:,chdx] = signal.resample(data[:,chdx], len(data[:,chdx]) * 2)
+        data = up_sample_data
     return data
 
 def get_from_STEAD(key=None, h5file_path='', is_noise=False):
@@ -142,16 +145,21 @@ def get_shifted_instance_for_EqDetPhasePicking_training(dataset_name = 'DiTing',
     # augmentation
     # shift data
     ori_length = np.shape(data)[0]
-    if ori_length < label_length:
+    if ori_length < data_length:
         temp_data_X[:ori_length,:] = data[:ori_length,:]
+        origin_shift = 0
     else:
-        temp_data_X[:data_length,:] = data[:data_length,:]
-
-    shift_sample = np.random.randint(low=P*(-1) + 1, high=data_length - S - 2)
+        if S >= data_length:
+            origin_shift = P - np.random.randint(200, 1000)
+        else:
+            origin_shift = 0
+        temp_data_X[:data_length,:] = data[origin_shift:origin_shift + data_length,:]
+        
+    shift_sample = np.random.randint(low=(P-origin_shift)*(-1) + 1, high=data_length - S + origin_shift - 2)
     temp_data_X = np.roll(temp_data_X, shift_sample, axis=0)
 
     # create label
-    label_P, label_S, label_D = label_EqDetPick(P, S, data_length, shift = shift_sample, label_length = label_length)
+    label_P, label_S, label_D = label_EqDetPick(P - origin_shift, S - origin_shift, data_length, shift = shift_sample, label_length = label_length)
     temp_data_Y[:,0] = label_P[:]
     temp_data_Y[:,1] = label_S[:]
     temp_data_Y[:,2] = label_D[:]    
@@ -210,7 +218,10 @@ def get_augmented_instance_for_EqDetPhasePicking_training(dataset_name='DiTing',
 
         if start_index >= data_length*max_time:
             break
-                    
+
+        p_t = int(P_list[key_dx])
+        s_t = int(S_list[key_dx])    
+
         if dataset_name == 'DiTing':
             try:
                 data = get_from_DiTing(part=temp_part_list[key_dx], key=key, h5file_path=dataset_path)
@@ -232,8 +243,6 @@ def get_augmented_instance_for_EqDetPhasePicking_training(dataset_name='DiTing',
             except:
                 print('Error on key {} STEAD'.format(key))
                 continue
-            p_t = int(P_list[key_dx])
-            s_t = int(S_list[key_dx])
 
             p_shift = np.random.randint(high=2000,low=500)
             s_shift = np.random.randint(high=int(10*(s_t-p_t)),low=int(2*(s_t-p_t)))
@@ -248,9 +257,6 @@ def get_augmented_instance_for_EqDetPhasePicking_training(dataset_name='DiTing',
             except:
                 print('Error on key {} INSTANCE'.format(key))
                 continue
-
-            p_t = int(P_list[key_dx])
-            s_t = int(S_list[key_dx])
 
             p_shift = np.random.randint(high=2000,low=500)
             s_shift = np.random.randint(high=int(8*(s_t-p_t)),low=int(2*(s_t-p_t)))
@@ -456,17 +462,10 @@ class DiTingGenerator:
         shuffle(self.indexes)
 
 ####################################################
-# Functions for creating a training dataset
+# Functions for creating final training dataset
 ####################################################
 
-
-
-
-####################################################
-# Functions for creating the final training dataset
-####################################################
-
-def get_EqDetPhasePicking_training_dataset_with_Negative_sampling(cfgs):
+def get_det_pick_training_dataset(cfgs):
     """
     input: yaml configurations
     output: tf.dataset.Dataset
