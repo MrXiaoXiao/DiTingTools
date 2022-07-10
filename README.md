@@ -24,9 +24,9 @@ Right now, there are several example notebooks:
 
 (3) 如何使用DiTingTools训练一个初动极性判别模型。
 
-(4) How to train an azimuth regression model with DiTingTools. [To be updated before 12th Jul.]
+(4) How to train an azimuth regression model with DiTingTools. [To be updated before 15th Jul.]
 
-(5) How to train a magnitude estimation model with DiTingTools. [To be updated before 12th Jul.]
+(5) How to train a magnitude estimation model with DiTingTools. [To be updated before 15th Jul.]
 
 More examples will be updated in the future.
 
