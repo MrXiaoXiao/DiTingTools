@@ -1,4 +1,4 @@
-from dtt.dev.det_pick.tfDataset import get_EqDetPhasePicking_training_dataset_with_Negtive_sampling
+from dtt.dev.det_pick.data import get_det_pick_training_dataset
 from dtt.dev.det_pick.models.DiTingPicker import DiTingPicker
 import keras
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
@@ -28,7 +28,7 @@ def train(cfgs=None):
         model.load_weights(cfgs['Training']['PreTrainedPath'])
         print('Done Load weights')
     
-    training_dataset, validation_data_gen = get_EqDetPhasePicking_training_dataset_with_Negtive_sampling(cfgs)
+    training_dataset, validation_data_gen = get_det_pick_training_dataset(cfgs)
     
     print('Done Creating Dataset')
 

@@ -14,6 +14,7 @@ import obspy
 ####################################################
 # Functions for reading datasets with a given key
 ####################################################
+
 def get_from_DiTing(part=None, key=None, h5file_path=''):
     """
     get waveform from DiTing Dataset
@@ -75,12 +76,6 @@ def get_from_SCSN_P(index, h5file_path=''):
         data = np.asarray(f['X'][index])
     return data
 
-def get_from_MZhao_CASC():
-    return
-
-def get_from_TL_Noiseset():
-    return
-
 def gen_colored_noise(alpha, length, dt = 0.01, fmin=0):
     # calculate freq
     f = rfftfreq(length, dt)
@@ -104,6 +99,221 @@ def gen_colored_noise(alpha, length, dt = 0.01, fmin=0):
     s  = sr + 1J * si
     y = irfft(s, n=length, axis=-1) / sigma
     return y
+
+def get_periodic_energy(noise_length):
+    noise_data = np.zeros([noise_length, 3])
+    shift_choice = np.random.choice([-1,1])
+    disp_gap = np.random.uniform(low=0.0008, high=0.008)
+    if shift_choice == 1:
+        shift_index = np.random.randint(low=0, high=noise_length)
+        for idx in range(3):
+            energy_distrub = np.cos(np.arange(0,disp_gap*noise_length,disp_gap)[:noise_length] + np.random.uniform(low=-disp_gap*3,high=disp_gap*3,size=noise_length))*np.random.uniform(low=-0.1,high=0.1,size=noise_length)
+            noise_data[shift_index:, idx] = energy_distrub[:noise_length - shift_index]
+    else:
+        for idx in range(3):
+            noise_data[:, idx] = np.cos(np.arange(0,disp_gap*noise_length,disp_gap)[:noise_length] + np.random.uniform(low=-disp_gap*3,high=disp_gap*3,size=noise_length))*np.random.uniform(low=-0.1,high=0.1,size=noise_length)
+    return noise_data
+
+def get_long_rect_misguide(noise_length):
+    noise_data = np.zeros([noise_length, 3])
+    for idx in range(3):
+        boundary_rate = np.random.uniform(low=0.1, high= 0.1)
+        top_value = np.random.uniform(low=0.01,high=100.0)
+        bottom_value = np.random.uniform(low=-100.0,high=-0.1)
+        bound_dx = int(noise_length*boundary_rate)
+        noise_data[bound_dx:(noise_length-bound_dx),idx] = top_value
+        noise_data[:bound_dx,idx] = bottom_value
+        noise_data[(noise_length-bound_dx):,idx] = bottom_value
+    reverse_factor = np.random.choice([-1,1])
+    noise_data *= reverse_factor
+    return noise_data
+
+def get_disalign_misguide(noise_length):
+    noise_data = np.zeros([noise_length, 3])
+    shift_index = np.random.randint(low=0, high=int(noise_length*0.8))
+    alpha = np.random.uniform(low=0,high=4)
+    taper_value = np.random.uniform(low=0, high=0.1)
+    
+    # signify_width = np.random.randint(low=1, high=int(noise_length*0.09))
+    # signify_scale = np.random.uniform(low=1.0,high=10.0)
+    
+    for idx in range(3):
+        temp_data = gen_colored_noise(alpha, noise_length)
+        temp_data_pad_zeros = np.zeros(noise_length)
+        if idx != 0:
+            disalign_shift = np.random.randint(low=0,high=int(noise_length*0.09))
+        else:
+            disalign_shift = 0
+        
+        temp_data_pad_zeros[shift_index+disalign_shift:] = temp_data[:noise_length - shift_index - disalign_shift]
+        temp_trace = obspy.Trace(data=temp_data_pad_zeros)
+        temp_trace.stats.sampling_rate = 100.0
+        filter_choice = np.random.choice([0,1])
+        
+        if filter_choice == 1:
+            temp_trace.filter('bandpass',freqmin=0.5,freqmax=40,zerophase=True)
+        elif filter_choice == 0:
+            temp_trace.filter('bandpass',freqmin=np.random.uniform(low=0.1,high=2.0),freqmax=np.random.uniform(low=8.0,high=45.0),zerophase=True)
+        
+        temper_choice = np.random.choice([-1,1])
+
+        if temper_choice == 1:
+            temp_trace.taper(0.05)
+        else:
+            temp_trace.taper(taper_value)
+
+        noise_data[:, idx] = temp_trace.data[:]   
+    return noise_data
+    
+def get_artifical_boundary(noise_length):
+    noise_data = np.zeros([noise_length, 3])
+    shift_index = np.random.randint(low=0, high=noise_length)
+    alpha = np.random.uniform(low=0,high=2)
+    taper_value = np.random.uniform(low=0, high=0.1)
+    shift_type_choice = np.random.choice([-1,1])
+    if shift_type_choice == 1:
+        for idx in range(3):
+            temp_data = gen_colored_noise(alpha, noise_length)
+            temp_data_pad_zeros = np.zeros(noise_length)
+            temp_data_pad_zeros[shift_index:] = temp_data[:noise_length - shift_index]
+            temp_trace = obspy.Trace(data=temp_data_pad_zeros)
+            temp_trace.stats.sampling_rate = 100.0
+            filter_choice = np.random.choice([-1,0,1])
+            if filter_choice == 1:
+                temp_trace.filter('bandpass',freqmin=0.5,freqmax=40,zerophase=True)
+            elif filter_choice == -1:
+                pass
+            elif filter_choice == 0:
+                temp_trace.filter('bandpass',freqmin=np.random.uniform(low=0.1,high=2.0),freqmax=np.random.uniform(low=8.0,high=45.0),zerophase=True)
+            temper_choice = np.random.choice([-1,1])
+
+            if temper_choice == 1:
+                temp_trace.taper(0.05)
+            else:
+                temp_trace.taper(taper_value)
+
+            noise_data[:, idx] = temp_trace.data[:]
+    elif shift_type_choice == -1:
+        for idx in range(3):
+            temp_data = gen_colored_noise(alpha, noise_length)
+            temp_data_pad_zeros = np.zeros(noise_length)
+            temp_data_pad_zeros[:noise_length - shift_index] = temp_data[:noise_length - shift_index]
+            temp_trace = obspy.Trace(data=temp_data_pad_zeros)
+            temp_trace.stats.sampling_rate = 100.0
+            filter_choice = np.random.choice([-1,0,1])
+            if filter_choice == 1:
+                temp_trace.filter('bandpass',freqmin=0.5,freqmax=40,zerophase=True)
+            elif filter_choice == -1:
+                pass
+            elif filter_choice == 0:
+                temp_trace.filter('bandpass',freqmin=np.random.uniform(low=0.1,high=2.0),freqmax=np.random.uniform(low=8.0,high=45.0),zerophase=True)
+            temper_choice = np.random.choice([-1,1])
+
+            if temper_choice == 1:
+                temp_trace.taper(0.05)
+            else:
+                temp_trace.taper(taper_value)
+
+            noise_data[:, idx] = temp_trace.data[:]
+        
+    return noise_data
+
+def get_simple_misguide(noise_length, misguide_width_min = 10, misguide_width_max = 300):
+    misguide_P_pos = np.random.randint(low=0,high=noise_length - misguide_width_max*8)
+    misguide_S_pos = np.random.randint(low=misguide_P_pos + 10,high=noise_length - misguide_width_max*4)
+    misguide_P_decay = np.random.uniform(low=0.1,high=2.0)
+    misguide_S_decay = np.random.uniform(low=0.1,high=2.0)
+    
+    #available_misguide_type = ['sine', 'triangle', 'spike', 'rect']
+    available_misguide_type = ['sine', 'triangle', 'spike', 'rect', 'ricker', 'random', 'empty']
+    misguide_type = np.random.choice(available_misguide_type)
+    misguide_length = np.random.randint(low=misguide_width_min, high=misguide_width_max)
+    
+    if misguide_type == 'sine':
+        sine_value = np.sin(np.arange(0,2*np.pi,2*np.pi/misguide_length))
+        sine_value_len = len(sine_value)
+        misguide_data = np.zeros([noise_length, 3])
+        misguide_data[misguide_P_pos:misguide_P_pos+sine_value_len, 0] = sine_value[:]
+        misguide_data[misguide_P_pos:misguide_P_pos+sine_value_len, 1] = sine_value[:]*misguide_S_decay
+        misguide_data[misguide_P_pos:misguide_P_pos+sine_value_len, 2] = sine_value[:]*misguide_S_decay
+        
+        misguide_data[misguide_S_pos:misguide_S_pos+sine_value_len, 0] = sine_value[:]*misguide_P_decay
+        misguide_data[misguide_S_pos:misguide_S_pos+sine_value_len, 1] = sine_value[:]
+        misguide_data[misguide_S_pos:misguide_S_pos+sine_value_len, 2] = sine_value[:]
+    
+    elif misguide_type == 'triangle':
+        tri_time = np.arange(-0.5,0.5,1/misguide_length)
+        tri_value = np.abs(signal.sawtooth(2 * np.pi* tri_time))*np.random.choice([-1,1])
+        tri_value_len = len(tri_value)
+        misguide_data = np.zeros([noise_length, 3])
+        misguide_data[misguide_P_pos:misguide_P_pos+tri_value_len, 0] = tri_value[:]
+        misguide_data[misguide_P_pos:misguide_P_pos+tri_value_len, 1] = tri_value[:]*misguide_S_decay
+        misguide_data[misguide_P_pos:misguide_P_pos+tri_value_len, 2] = tri_value[:]*misguide_S_decay
+        
+        misguide_data[misguide_S_pos:misguide_S_pos+tri_value_len, 0] = tri_value[:]*misguide_P_decay
+        misguide_data[misguide_S_pos:misguide_S_pos+tri_value_len, 1] = tri_value[:]
+        misguide_data[misguide_S_pos:misguide_S_pos+tri_value_len, 2] = tri_value[:]
+    
+    elif misguide_type == 'spike':
+        misguide_data = np.zeros([noise_length, 3])
+        misguide_data[misguide_P_pos, 0] = 1.0*np.random.choice([-1,1])
+        misguide_data[misguide_P_pos, 1] = 1.0*misguide_S_decay*np.random.choice([-1,1])
+        misguide_data[misguide_P_pos, 2] = 1.0*misguide_S_decay*np.random.choice([-1,1])
+        
+        misguide_data[misguide_S_pos, 0] = 1.0*misguide_P_decay*np.random.choice([-1,1])
+        misguide_data[misguide_S_pos, 1] = 1.0*np.random.choice([-1,1])
+        misguide_data[misguide_S_pos, 2] = 1.0*np.random.choice([-1,1])
+    
+    elif misguide_type == 'rect':
+        misguide_data = np.zeros([noise_length, 3])
+        rect_flag = np.random.choice([-1,1])
+        misguide_data[misguide_P_pos:misguide_P_pos+misguide_length, 0] = rect_flag
+        misguide_data[misguide_P_pos:misguide_P_pos+misguide_length, 1] = rect_flag*misguide_S_decay
+        misguide_data[misguide_P_pos:misguide_P_pos+misguide_length, 2] = rect_flag*misguide_S_decay
+        
+        misguide_data[misguide_S_pos:misguide_S_pos+misguide_length, 0] = rect_flag*misguide_P_decay
+        misguide_data[misguide_S_pos:misguide_S_pos+misguide_length, 1] = rect_flag
+        misguide_data[misguide_S_pos:misguide_S_pos+misguide_length, 2] = rect_flag
+        
+    elif misguide_type == 'ricker':
+        misguide_data = np.zeros([noise_length, 3])
+        ricker_value = signal.ricker(misguide_length, 16)*np.random.choice([-1,1])
+        ricker_value_len = len(ricker_value)
+        misguide_data[misguide_P_pos:misguide_P_pos+ricker_value_len, 0] = ricker_value[:]
+        misguide_data[misguide_P_pos:misguide_P_pos+ricker_value_len, 1] = ricker_value[:]*misguide_S_decay
+        misguide_data[misguide_P_pos:misguide_P_pos+ricker_value_len, 2] = ricker_value[:]*misguide_S_decay
+        
+        misguide_data[misguide_S_pos:misguide_S_pos+ricker_value_len, 0] = ricker_value[:]*misguide_P_decay
+        misguide_data[misguide_S_pos:misguide_S_pos+ricker_value_len, 1] = ricker_value[:]
+        misguide_data[misguide_S_pos:misguide_S_pos+ricker_value_len, 2] = ricker_value[:]
+    
+    elif misguide_type == 'random':
+        misguide_data = np.zeros([noise_length, 3])
+        random_value = np.random.normal(0.0, 1.0, size = misguide_length)*np.random.choice([-1,1])
+        random_value_len = len(random_value)
+        misguide_data[misguide_P_pos:misguide_P_pos+random_value_len, 0] = random_value[:]
+        misguide_data[misguide_P_pos:misguide_P_pos+random_value_len, 1] = random_value[:]*misguide_S_decay
+        misguide_data[misguide_P_pos:misguide_P_pos+random_value_len, 2] = random_value[:]*misguide_S_decay
+        
+        misguide_data[misguide_S_pos:misguide_S_pos+random_value_len, 0] = random_value[:]*misguide_P_decay
+        misguide_data[misguide_S_pos:misguide_S_pos+random_value_len, 1] = random_value[:]
+        misguide_data[misguide_S_pos:misguide_S_pos+random_value_len, 2] = random_value[:]
+    
+    elif misguide_type == 'empty':
+        misguide_data = np.zeros([noise_length, 3])
+    
+    available_noise_type = ['colorful', 'none']
+    noise_type = np.random.choice(available_noise_type)
+    if noise_type == 'none':
+        pass
+    elif noise_type == 'colorful':
+        for idx in range(3):
+            alpha = np.random.uniform(low=0,high=2)
+            noise_data = gen_colored_noise(alpha, noise_length)
+            noise_data /= np.max(np.abs(noise_data))
+            noise_factor = np.random.uniform(low=0,high=0.3)
+            misguide_data[:,idx] += noise_data*noise_factor
+    return misguide_data
 
 ####################################################
 # Functions for creating a training instance
@@ -165,7 +375,6 @@ def get_shifted_instance_for_EqDetPhasePicking_training(dataset_name = 'DiTing',
     temp_data_Y[:,2] = label_D[:]    
 
     return temp_data_X, temp_data_Y
-
 
 def get_augmented_instance_for_EqDetPhasePicking_training(dataset_name='DiTing',
                                                             dataset_path = None,
@@ -243,7 +452,7 @@ def get_augmented_instance_for_EqDetPhasePicking_training(dataset_name='DiTing',
             except:
                 print('Error on key {} STEAD'.format(key))
                 continue
-
+            
             p_shift = np.random.randint(high=2000,low=500)
             s_shift = np.random.randint(high=int(10*(s_t-p_t)),low=int(2*(s_t-p_t)))
             if p_t - p_shift <= 0:
@@ -330,6 +539,88 @@ def get_augmented_instance_for_EqDetPhasePicking_training(dataset_name='DiTing',
     
     return temp_data_X, temp_data_Y
 
+def get_DiTing_EDPP_Negtive_example(noise_length):
+    available_noise_type = ['simple_misguide', 'artifical_boundary', 'periodic_energy', 'disalign_misguide', 'long_rect_misguide']
+    noise_type = np.random.choice(available_noise_type)
+    if noise_type == 'simple_misguide':
+        noise_data = get_simple_misguide(noise_length)
+    elif noise_type == 'artifical_boundary':
+        noise_data = get_artifical_boundary(noise_length)
+    elif noise_type == 'periodic_energy':
+        noise_data = get_periodic_energy(noise_length)
+    elif noise_type == 'disalign_misguide':
+        noise_data = get_disalign_misguide(noise_length)
+    elif noise_type == 'long_rect_misguide':
+        noise_data = get_long_rect_misguide(noise_length)
+
+    for chdx in range(3):
+        noise_data[:,chdx] -= np.mean(noise_data[:,chdx])
+        norm_factor = np.std(noise_data[:,chdx])
+        if norm_factor == 0:
+            pass
+        else:
+            noise_data[:,chdx] /= norm_factor
+    noise_Y = np.zeros([noise_length, 3])
+    return noise_data, noise_Y
+
+def get_real_noise_for_EqDetPhasePicking_training(dataset_name='STEAD_NO',
+                                                dataset_path = None,
+                                                data_length = 6144,
+                                                key_list = None,
+                                                max_time = 2
+                                                ):
+    
+    temp_data_X = np.zeros([int(data_length*max_time),3])
+    temp_data_Y = np.zeros([int(data_length),3])
+
+    start_index = 0
+
+    for key in key_list:
+        if start_index >= data_length*max_time:
+            temp_data_X[:,chdx] -= np.mean(temp_data_X[:,chdx])
+                    
+        if dataset_name == 'TLSC_NO':
+            pass # private dataset
+        elif dataset_name == 'STEAD_NO':
+            data = get_from_STEAD(key=key, h5file_path=dataset_path, is_noise=True)
+        elif dataset_name == 'INSTANCE_NO':
+            data = get_from_INSTANCE(key=key, h5file_path=dataset_path)
+        else:
+            print('Unsupported noise set: {}'.format(dataset_name))
+        
+        temp_length = np.shape(data)[0]
+        
+        for chdx in range(3):
+            data[:,chdx] -= np.mean(data[:,chdx])
+            norm_factor = np.std(data[:,chdx])
+            if norm_factor == 0:
+                pass
+            else:
+                data[:,chdx] /= np.std(data[:,chdx])
+        
+        if start_index + temp_length >= data_length*max_time:
+            append_length = data_length*max_time - start_index
+            temp_data_X[start_index:, :] = data[:append_length,:]
+            start_index += append_length
+        else:
+            append_length = temp_length
+            temp_data_X[start_index:start_index+append_length, :] = data[:,:]
+            start_index += append_length
+    
+    shift_dx = np.random.randint( low=0,high=data_length*(max_time-1) )
+    temp_data_X = temp_data_X[shift_dx:shift_dx+data_length,:]
+
+    # STD normalization here
+    for chdx in range(3):
+        temp_data_X[:,chdx] -= np.mean(temp_data_X[:,chdx])
+        norm_factor = np.std(temp_data_X[:,chdx])
+        if norm_factor == 0:
+            pass
+        else:
+            temp_data_X[:,chdx] /= norm_factor
+
+    return temp_data_X, temp_data_Y
+
 ####################################################
 # Functions for creating a training generator
 ####################################################
@@ -355,8 +646,9 @@ class DiTingGenerator:
             self.key_str = 'trace_name'
             self.p_str = 'trace_P_arrival_sample'
             self.s_str = 'trace_S_arrival_sample'
-
+        
         self.has_parts = csv_hdf5_mapping_dict['has_parts']
+        """
         if self.has_parts:
             self.part_num = csv_hdf5_mapping_dict['part_num']
             self.part_list = []
@@ -364,7 +656,9 @@ class DiTingGenerator:
                 self.part_list.append( h5py.File(csv_hdf5_mapping_dict['part_list'][idx], 'r') )
         else:
             self.hdf5_path = h5py.File(csv_hdf5_mapping_dict['hdf5_path'], 'r')
-        
+        """
+        self.hdf5_path = csv_hdf5_mapping_dict['hdf5_path']
+
         self.combo_num = csv_hdf5_mapping_dict['combo_num']
         self.length = csv_hdf5_mapping_dict['length']
         self.n_channels = csv_hdf5_mapping_dict['n_channels']
@@ -389,8 +683,8 @@ class DiTingGenerator:
                     choice_id = self.indexes[idx]
                     choice_line = self.csv_file.iloc[choice_id]
                     key = choice_line[self.key_str]
-                    p_t = choice_line[self.p_str]
-                    s_t = choice_line[self.s_str]
+                    p_t = int(choice_line[self.p_str])
+                    s_t = int(choice_line[self.s_str])
                     part = None
                     if self.has_parts:
                         part = choice_line[self.part_str]
@@ -398,8 +692,8 @@ class DiTingGenerator:
                     if self.name == 'DiTing':
                         key_correct = key.split('.')
                         key = key_correct[0].rjust(6,'0') + '.' + key_correct[1].ljust(4,'0')
-                        p_t = (p_t + 30)*100
-                        s_t = (s_t + 30)*100
+                        p_t = int(p_t)*2
+                        s_t = int(s_t)*2
                     
                     X, Y = get_shifted_instance_for_EqDetPhasePicking_training(dataset_name=self.name, 
                                                                                 dataset_path=self.hdf5_path,
@@ -420,23 +714,24 @@ class DiTingGenerator:
                         choice_line = self.csv_file.iloc[choice_id]
                         if self.has_parts:
                             part = choice_line[self.part_str]
-                            temp_part_list.append(self.part_list[part])
+                            temp_part_list.append(part)
                         
                         key = choice_line[self.key_str]
-                        p_t = choice_line[self.p_str]
-                        s_t = choice_line[self.s_str]
+                        p_t = int(choice_line[self.p_str])
+                        s_t = int(choice_line[self.s_str])
 
                         if self.name == 'DiTing':
                             key_correct = key.split('.')
                             key = key_correct[0].rjust(6,'0') + '.' + key_correct[1].ljust(4,'0')
-                            p_t = (p_t + 30)*100
-                            s_t = (s_t + 30)*100
+                            p_t = int(p_t)*2
+                            s_t = int(s_t)*2
                             
                         key_list.append(key)
                         P_list.append(p_t)
                         S_list.append(s_t)
 
                         X, Y = get_augmented_instance_for_EqDetPhasePicking_training(dataset_name=self.name,
+                                                                                dataset_path=self.hdf5_path,
                                                                                 data_length = self.length,
                                                                                 temp_part_list = temp_part_list,
                                                                                 key_list = key_list,
@@ -460,6 +755,64 @@ class DiTingGenerator:
 
     def on_epoch_end(self):
         shuffle(self.indexes)
+
+class DiTingRealNoiseGenerator:
+    # init function
+    def __init__(self, csv_hdf5_mapping_dict):
+        self.csv_file = pd.read_csv(csv_hdf5_mapping_dict['csv_path'], dtype = {'key': str})
+        self.name = csv_hdf5_mapping_dict['name']
+        if self.name not in ['TLSC_NO', 'STEAD_NO', 'INSTANCE_NO']:
+            print('Dataset type not Supported Yet!!!')
+        self.hdf5_path = csv_hdf5_mapping_dict['hdf5_path']
+        self.combo_num = csv_hdf5_mapping_dict['combo_num']
+        self.length = csv_hdf5_mapping_dict['length']
+        self.n_classes = csv_hdf5_mapping_dict['n_classes']
+        self.duplicate_num = csv_hdf5_mapping_dict['duplicate_num']
+        self.indexes = np.arange(len(self.csv_file))
+        self.on_epoch_end()
+    def __call__(self):
+        # shuffle
+        while True:
+            shuffle(self.indexes)
+            for idx in range(0,len(self.indexes),self.combo_num):
+                choice_ids = self.indexes[idx*self.combo_num:(idx+ 1)*self.combo_num]
+                if self.name == 'TLSC_NO':
+                    pass # private dataset choice_keys = self.csv_file['key'].iloc[choice_ids]
+                elif self.name == 'STEAD_NO' or self.name == 'INSTANCE_NO':
+                    choice_keys = self.csv_file['trace_name'].iloc[choice_ids]
+                X, Y = get_real_noise_for_EqDetPhasePicking_training(dataset_name=self.name,
+                                                                     dataset_path = self.hdf5_path,
+                                                                     data_length = self.length,
+                                                                     key_list = choice_keys)
+                X = DiTing_random_filter_augmentation(X)
+                X = DiTing_random_channel_dropout_augmentation(X)
+                Y = np.repeat(Y, self.duplicate_num, axis=-1)
+                Y_dict = dict()
+                for class_dx in range(self.n_classes):
+                    for dup_dx in range(self.duplicate_num):
+                        Y_dict['C{}D{}'.format(class_dx,dup_dx)] = Y[:,class_dx*self.duplicate_num+dup_dx:class_dx*self.duplicate_num+dup_dx+1]
+                yield X, Y_dict
+    def on_epoch_end(self):
+        shuffle(self.indexes)
+
+class DiTingSynNoiseGenerator:
+    # init function
+    def __init__(self, csv_hdf5_mapping_dict):
+        # workaround
+        self.noise_length = csv_hdf5_mapping_dict['length']
+        self.duplicate_num = csv_hdf5_mapping_dict['duplicate_num']
+        self.n_classes = csv_hdf5_mapping_dict['n_classes']
+    def __call__(self):
+        while True:
+            X, Y = get_DiTing_EDPP_Negtive_example(self.noise_length)
+            Y = np.repeat(Y, self.duplicate_num, axis=-1)
+            Y_dict = dict()
+            for class_dx in range(self.n_classes):
+                for dup_dx in range(self.duplicate_num):
+                    Y_dict['C{}D{}'.format(class_dx,dup_dx)] = Y[:,class_dx*self.duplicate_num+dup_dx:class_dx*self.duplicate_num+dup_dx+1]
+            yield X, Y_dict
+    def on_epoch_end(self):
+        return
 
 ####################################################
 # Functions for creating final training dataset
@@ -509,17 +862,16 @@ def get_det_pick_training_dataset(cfgs):
         validation_dict_list.append(t_dict)
         validation_weight_list.append(float(t_dict['sample_weight']))
 
-    training_dataset_list = [tf.data.Dataset.from_generator(DiTingGenerator(training_dict_list[idx]),output_types = (tf.float32, label_type_dict), output_shapes = ( (model_input_length,model_input_channel), label_shape_dict)).repeat() for idx in range(len(training_dict_list))]
+    training_dataset_list = [tf.data.Dataset.from_generator(DiTingGenerator(training_dict_list[idx]),output_types = (tf.float32, label_type_dict), output_shapes = ( (model_input_length,model_input_channel), label_shape_dict)) for idx in range(len(training_dict_list))]
     training_sample_dataset = tf.data.experimental.sample_from_datasets(training_dataset_list, weights=training_weight_list)
 
     if len(validation_dict_list) >= 1:
-        validation_dataset_list = [tf.data.Dataset.from_generator(DiTingGenerator(validation_dict_list[idx]),output_types = (tf.float32, label_type_dict), output_shapes = ( (validation_dict_list[idx]['length'],validation_dict_list[idx]['n_channels']), label_shape_dict)).repeat() for idx in range(len(validation_dict_list))]
+        validation_dataset_list = [tf.data.Dataset.from_generator(DiTingGenerator(validation_dict_list[idx]),output_types = (tf.float32, label_type_dict), output_shapes = ( (validation_dict_list[idx]['length'],validation_dict_list[idx]['n_channels']), label_shape_dict)) for idx in range(len(validation_dict_list))]
         validation_sample_dataset = tf.data.experimental.sample_from_datasets(validation_dataset_list, weights=validation_weight_list)
     else:
         validation_sample_dataset = None
 
-    """
-    # TODO Clean these code
+
     noiseset_dict_list = list()
     noiseset_weight_list = list()
     for noiseset_key in cfgs['Training']['Noisesets']:
@@ -529,15 +881,16 @@ def get_det_pick_training_dataset(cfgs):
         noiseset_dict_list.append(t_dict)
         noiseset_weight_list.append(float(t_dict['sample_weight']))
     
-    real_negative_dataset_list = [tf.data.Dataset.from_generator(DiTingRealNoiseGenerator(noiseset_dict_list[idx]),output_types = (tf.float32, label_type_dict), output_shapes = ( (model_input_length,model_input_channel), label_shape_dict)).repeat() for idx in range(len(noiseset_dict_list))]
+    real_negative_dataset_list = [tf.data.Dataset.from_generator(DiTingRealNoiseGenerator(noiseset_dict_list[idx]),output_types = (tf.float32, label_type_dict), output_shapes = ( (model_input_length,model_input_channel), label_shape_dict)) for idx in range(len(noiseset_dict_list))]
     real_negative_dataset = tf.data.experimental.sample_from_datasets(real_negative_dataset_list, weights=noiseset_weight_list)
-
-    final_training_sample_dataset = tf.data.experimental.sample_from_datasets([training_sample_dataset.repeat(),real_negative_dataset.repeat(),syn_negative_dataset.repeat()], weights=[cfgs['Training']['trace_weight'], cfgs['Training']['real_noise_weight'],cfgs['Training']['syn_noise_weight'] ])
     
-    final_validation_sample_dataset = tf.data.experimental.sample_from_datasets([validation_sample_dataset.repeat(), real_negative_dataset.repeat(),syn_negative_dataset.repeat()],weights=[cfgs['Training']['trace_weight'], cfgs['Training']['real_noise_weight'],cfgs['Training']['syn_noise_weight'] ])
-    """
-    return training_sample_dataset, validation_sample_dataset
+    syn_negative_dataset = tf.data.Dataset.from_generator(DiTingSynNoiseGenerator(t_dict), output_types = (tf.float32, label_type_dict), output_shapes = ((model_input_length,model_input_channel), label_shape_dict))
+    
+    final_training_sample_dataset = tf.data.experimental.sample_from_datasets([training_sample_dataset,real_negative_dataset,syn_negative_dataset], weights=[cfgs['Training']['trace_weight'], cfgs['Training']['real_noise_weight'],cfgs['Training']['syn_noise_weight']])
 
+    final_validation_sample_dataset = tf.data.experimental.sample_from_datasets([validation_sample_dataset, real_negative_dataset.repeat(),syn_negative_dataset.repeat()], weights=[cfgs['Training']['trace_weight'], cfgs['Training']['real_noise_weight'],cfgs['Training']['syn_noise_weight']])
+
+    return final_training_sample_dataset, final_validation_sample_dataset
 
 ####################################################
 # misc functions
@@ -581,7 +934,7 @@ def DiTing_random_channel_dropout_augmentation(X):
     return X
 
 def DiTing_random_filter_augmentation(X):
-    filter_choice = np.random.choice(['fix', 'high_random', 'low_random', 'none'], p=[0.30,0.15,0.15,0.30])
+    filter_choice = np.random.choice(['fix', 'high_random', 'low_random', 'none'], p=[0.35,0.15,0.15,0.35])
     if filter_choice == 'none':
         return X
     elif filter_choice == 'fix':
