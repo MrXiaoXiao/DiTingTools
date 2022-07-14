@@ -77,7 +77,7 @@ Training:
     input_channel: 3
     n_classes: 3
     show_summary: True
-  GPU_ID: '3'
+  GPU_ID: '0'
   TASK_ID: DiTingPicker
   Workers: 16
   multiprocessing: True
