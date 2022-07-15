@@ -159,6 +159,7 @@ class DiTingFMPGenerator:
                 p_t = choice_line['p_pick']*2
                 motin = choice_line['p_motion']
                 sharpness = choice_line['p_clarity']
+
                 X, Y = get_instance_for_FirstMotionPolarity_training(dataset_name=self.name,
                                                 dataset_path=self.hdf5_path,
                                                 data_length = self.length,

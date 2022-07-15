@@ -1,4 +1,4 @@
-from dtt.dev.fmp.tfDataset import get_FMP_training_dataset
+from dtt.dev.fmp.data import get_FMP_training_dataset
 from dtt.dev.fmp.models.DiTingMotion import DiTingMotion
 import keras
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, ReduceLROnPlateau, EarlyStopping

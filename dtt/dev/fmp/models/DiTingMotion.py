@@ -8,7 +8,6 @@ from keras.layers import UpSampling1D, Cropping1D, Concatenate, Activation, add,
 from keras.layers import add, Activation, LSTM, Conv1D, Reshape
 from keras.layers import MaxPooling1D, UpSampling1D, Cropping1D, SpatialDropout1D, Bidirectional, BatchNormalization
 
-
 def combo_conv(x, t_channel_num):
     x_1 = layers.Conv1D(t_channel_num, 3, dilation_rate=1, activation='relu', padding='same')(x)
     x_2 = layers.Conv1D(t_channel_num, 3, dilation_rate=2, activation='relu', padding='same')(x)
