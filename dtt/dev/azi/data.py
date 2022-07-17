@@ -15,7 +15,7 @@ import obspy
 # Functions for reading datasets with a given key
 ####################################################
 
-def get_from_DiTing_FMP(part=None, key=None, h5file_path=''):
+def get_from_DiTing(part=None, key=None, h5file_path=''):
     """
     get waveform from DiTing Dataset
     TODO: description
@@ -29,20 +29,38 @@ def get_from_DiTing_FMP(part=None, key=None, h5file_path=''):
         data = up_sample_data
     return data
 
-def get_from_SCSN_FMP(index, h5file_path=''):
+def get_from_STEAD(key=None, h5file_path='', is_noise=False):
     """
-    get waveform from SCSN FMP
+    get waveform from STEAD Dataset
     TODO: description
     """
     with h5py.File(h5file_path, 'r') as f:
-        data = np.asarray(f['X'][index])
-        label = np.asarray(f['Y'][index])
-    return data, label
+        if is_noise:
+            dataset = f.get('non_earthquake/noise/'+str(key))
+            data = np.array(dataset).astype(np.float32)
+        else:
+            dataset = f.get('earthquake/local/'+str(key))
+            data = np.array(dataset).astype(np.float32)
+    return data[:,::-1]
+
+def get_from_INSTANCE(key=None, h5file_path='', is_noise=False):
+    """
+    get waveform from INSTANCE Dataset
+    TODO: description
+    """
+    with h5py.File(h5file_path, 'r') as f:
+        dataset = f.get('data/'+str(key))
+        data_t = np.array(dataset).astype(np.float32)
+        data = np.zeros([12000,3])
+        data[:,0] = data_t[2,:]
+        data[:,1] = data_t[1,:]
+        data[:,2] = data_t[0,:]
+    return data
 
 ####################################################
 # Functions for creating a training instance
 ####################################################
-def get_augmented_instance_for_FMP_training(dataset_name='DiTing',
+def get_instance_for_AZI_training(dataset_name='DiTing',
                                                 dataset_path = None,
                                                 data_length = 6144,
                                                 temp_part_list = None,
@@ -61,92 +79,10 @@ def get_augmented_instance_for_FMP_training(dataset_name='DiTing',
 
     return temp_data_X, temp_data_Y
 
-def get_DiTing_EDPP_Negtive_example(noise_length):
-    available_noise_type = ['simple_misguide', 'artifical_boundary', 'periodic_energy', 'disalign_misguide', 'long_rect_misguide']
-    noise_type = np.random.choice(available_noise_type)
-    if noise_type == 'simple_misguide':
-        noise_data = get_simple_misguide(noise_length)
-    elif noise_type == 'artifical_boundary':
-        noise_data = get_artifical_boundary(noise_length)
-    elif noise_type == 'periodic_energy':
-        noise_data = get_periodic_energy(noise_length)
-    elif noise_type == 'disalign_misguide':
-        noise_data = get_disalign_misguide(noise_length)
-    elif noise_type == 'long_rect_misguide':
-        noise_data = get_long_rect_misguide(noise_length)
-
-    for chdx in range(3):
-        noise_data[:,chdx] -= np.mean(noise_data[:,chdx])
-        norm_factor = np.std(noise_data[:,chdx])
-        if norm_factor == 0:
-            pass
-        else:
-            noise_data[:,chdx] /= norm_factor
-    noise_Y = np.zeros([noise_length, 3])
-    return noise_data, noise_Y
-
-def get_real_noise_for_EqDetPhasePicking_training(dataset_name='STEAD_NO',
-                                                dataset_path = None,
-                                                data_length = 6144,
-                                                key_list = None,
-                                                max_time = 2
-                                                ):
-    
-    temp_data_X = np.zeros([int(data_length*max_time),3])
-    temp_data_Y = np.zeros([int(data_length),3])
-
-    start_index = 0
-
-    for key in key_list:
-        if start_index >= data_length*max_time:
-            temp_data_X[:,chdx] -= np.mean(temp_data_X[:,chdx])
-                    
-        if dataset_name == 'TLSC_NO':
-            pass # private dataset
-        elif dataset_name == 'STEAD_NO':
-            data = get_from_STEAD(key=key, h5file_path=dataset_path, is_noise=True)
-        elif dataset_name == 'INSTANCE_NO':
-            data = get_from_INSTANCE(key=key, h5file_path=dataset_path)
-        else:
-            print('Unsupported noise set: {}'.format(dataset_name))
-        
-        temp_length = np.shape(data)[0]
-        
-        for chdx in range(3):
-            data[:,chdx] -= np.mean(data[:,chdx])
-            norm_factor = np.std(data[:,chdx])
-            if norm_factor == 0:
-                pass
-            else:
-                data[:,chdx] /= np.std(data[:,chdx])
-        
-        if start_index + temp_length >= data_length*max_time:
-            append_length = data_length*max_time - start_index
-            temp_data_X[start_index:, :] = data[:append_length,:]
-            start_index += append_length
-        else:
-            append_length = temp_length
-            temp_data_X[start_index:start_index+append_length, :] = data[:,:]
-            start_index += append_length
-    
-    shift_dx = np.random.randint( low=0,high=data_length*(max_time-1) )
-    temp_data_X = temp_data_X[shift_dx:shift_dx+data_length,:]
-
-    # STD normalization here
-    for chdx in range(3):
-        temp_data_X[:,chdx] -= np.mean(temp_data_X[:,chdx])
-        norm_factor = np.std(temp_data_X[:,chdx])
-        if norm_factor == 0:
-            pass
-        else:
-            temp_data_X[:,chdx] /= norm_factor
-
-    return temp_data_X, temp_data_Y
-
 ####################################################
 # Functions for creating a training generator
 ####################################################
-class DiTingGenerator_FMP:
+class DiTingGenerator_Azi:
     # init function
     def __init__(self, csv_hdf5_mapping_dict):
         self.csv_file = pd.read_csv(csv_hdf5_mapping_dict['csv_path'], dtype = {'key': str})
@@ -282,7 +218,7 @@ class DiTingGenerator_FMP:
 # Functions for creating final training dataset
 ####################################################
 
-def get_FMP_training_dataset(cfgs):
+def get_Azi_training_dataset(cfgs):
     """
     input: yaml configurations
     output: tf.dataset.Dataset
