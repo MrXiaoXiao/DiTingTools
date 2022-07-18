@@ -1,7 +1,7 @@
-from dtt.dev.azi.data import get_Azi_training_dataset
-from dtt.dev.azi.models.DiTingAzi import DiTingBAZ_Basic
+from dtt.dev.mag.data import get_Mag_training_dataset
+from dtt.dev.mag.models.DiTingMag import DiTingMag_Basic
 import keras
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler, ReduceLROnPlateau, EarlyStopping
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
 import tensorflow as tf
 import os
 import yaml
@@ -15,8 +15,8 @@ def train(cfgs=None):
         print('Empty Config Error')
         return
 
-    if cfgs['Training']['Model']['type'] == 'DiTingBAZ_Basic':
-        model = DiTingBAZ_Basic(cfgs)
+    if cfgs['Training']['Model']['type'] == 'DiTingMag_Basic':
+        model = DiTingMag_Basic(cfgs)
     else:
         print('Model Type Error!')
         return
@@ -26,7 +26,7 @@ def train(cfgs=None):
         model.load_weights(cfgs['Training']['PreTrainedPath'])
         print('Done Load weights')
     
-    training_dataset, validation_data_gen = get_Azi_training_dataset(cfgs)
+    training_dataset, validation_data_gen = get_Mag_training_dataset(cfgs)
     
     print('Done Creating Dataset')
 
@@ -60,7 +60,7 @@ def train(cfgs=None):
     return
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='DiTingTools: Back Azimuth Regression Training')
+    parser = argparse.ArgumentParser(description='DiTingTools: Earthquake Magnitude Regression Training')
     parser.add_argument('--config-file', dest='config_file', type=str, help='Path to Configuration file')
     args = parser.parse_args()
     cfgs = yaml.load(open(args.config_file), Loader=yaml.SafeLoader)
