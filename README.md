@@ -24,13 +24,13 @@ Right now, there are several example notebooks:
 
 (3) 如何使用DiTingTools训练一个初动极性判别模型。
 
-(4) How to train an azimuth regression model with DiTingTools. [To be updated before 18th Jul.]
+(4) How to train an azimuth regression model with DiTingTools. 
 
-(4) 如何使用DiTingTools训练一个方位角估算模型。[To be updated before 18th Jul.]
+(4) 如何使用DiTingTools训练一个方位角估算模型。
 
-(5) How to train a magnitude estimation model with DiTingTools. [To be updated before 18th Jul.]
+(5) How to train a magnitude estimation model with DiTingTools.
 
-(5) 如何使用DiTingTools训练一个震级估算模型。[To be updated before 18th Jul.]
+(5) 如何使用DiTingTools训练一个震级估算模型。
 
 More examples will be updated in the future.
 
@@ -57,10 +57,6 @@ For the demo version, just clone the project, unzip the code, and append it to y
 This module is undergoing rapid development. The demo version is for presentations at the DiTingCamp and USTC-seismo-training.
 
 该模块仍在开发阶段。目前原型版本为谛听训练营和科大“地震学算法与程序培训班”使用。
-
-The cleaning and update on the demo version will be finished before 18th Jul. 2022.
-
-完整原型版代码整理将在7月18号之前清理完毕。
 
 The continuous development of DiTingTools is going to be a challenging long-term task. We welcome any suggestions or feedback.
 
