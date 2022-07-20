@@ -19,10 +19,11 @@ def Conv1DTranspose(input_tensor, filters, kernel_size, strides=2, padding='same
     return x
 
 def Conv1D_simple(x, t_channel_num,  activation_func='relu'):
+    # conv along time axis
     x_out = layers.Conv1D(t_channel_num, 3, dilation_rate=1, activation=activation_func, padding='same')(x)
     return x_out
 
-def ResBlock(x, t_channel_num, batch_norm = True, activation_func='relu'):
+def ResBlock(x, t_channel_num, batch_norm = False, activation_func='relu'):
     x_in = x
     x_out = Conv1D_simple(x, t_channel_num, activation_func=None)
     if batch_norm:
@@ -85,9 +86,7 @@ def Unet_upsampling_part(c_1_2, c_2_2, c_3_2, c_4_2, c_5_2, name=None):
 
 def DiTingPicker(cfgs=None):
     """
-    function for returning DiTingPicker model.
-    input: cfgs. yaml configuration data.
-    output: compiled deep learning model.
+    Stacked Unet
     """
     input_data = layers.Input(shape=(cfgs['Training']['Model']['input_length'],cfgs['Training']['Model']['input_channel']),name='input')
 
@@ -164,7 +163,7 @@ def DiTingPicker(cfgs=None):
         pass
     
     if cfgs['Training']['Loss'] == 'bce':
-        model.compile(loss='binary_crossentropy',optimizer=opt)
+        model.compile(loss='binary_crossentropy',optimizer=opt,metrics=['accuracy'])
     else:
         print('Loss: {}'.format(cfgs['Training']['Loss']))
         print('Model not complied!!!')

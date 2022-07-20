@@ -95,8 +95,11 @@ def get_instance_for_MagReg_training(dataset_name = 'DiTing',
     else:
         print('Dataset Type Not Supported!!!')
         return
-
-    temp_data_X[:,:] = data[P - length_before_P: P + length_after_P, :]
+    try:
+        temp_data_X[:,:] = data[P - length_before_P: P + length_after_P, :]
+    except:
+        return temp_data_X, temp_data_Y
+    
     for chdx in range(3):
         temp_data_X[:,chdx] -= np.mean(temp_data_X[:,chdx])
 

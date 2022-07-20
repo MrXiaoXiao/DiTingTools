@@ -95,7 +95,14 @@ def get_instance_for_BAZReg_training(dataset_name = 'DiTing',
     else:
         print('Dataset Type Not Supported!!!')
         return
-    temp_data_X[:,:] = data[P - length_before_P: P + length_after_P, :]
+    
+    try:
+        temp_data_X[:,:] = data[P - length_before_P: P + length_after_P, :]
+    except:
+        temp_data_X = np.zeros([data_length, 3])
+        temp_data_Y = np.zeros([2])
+        return temp_data_X, temp_data_Y
+
     for chdx in range(3):
         temp_data_X[:,chdx] -= np.mean(temp_data_X[:,chdx])
     norm_factor = np.max(np.abs(temp_data_X[:,:]))

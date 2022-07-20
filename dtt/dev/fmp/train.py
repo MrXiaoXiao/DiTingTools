@@ -39,7 +39,7 @@ def train(cfgs=None):
     checkpoint = ModelCheckpoint(filepath, monitor='val_loss', save_best_only=True, mode='auto', period=1)
     print('Done Creating Generator')
     
-    earlyStoping = EarlyStopping(monitor='val_loss', patience=10)
+    earlyStoping = EarlyStopping(monitor='val_loss', patience=100)
     lr_reducer = ReduceLROnPlateau(factor=0.5,cooldown=0,patience=5,min_lr = cfgs['Training']['min_lr'])
     
     hist = model.fit(training_dataset.batch(cfgs['Training']['batchsize']).prefetch(tf.data.experimental.AUTOTUNE),

@@ -82,8 +82,9 @@ def get_instance_for_FirstMotionPolarity_training(dataset_name='DiTing',
             temp_data_Y[1,1] = 1
 
     elif dataset_name == 'SCSN_FMP':
-        data, label = get_from_SCSN_FMP(key = key, h5file_path = dataset_path)
-        temp_data_X[:,0] = data[p_t - half_len: p_t + half_len, 0]
+        p_t = 300
+        data, label = get_from_SCSN_FMP(index = key, h5file_path = dataset_path)
+        temp_data_X[:,0] = data[p_t - half_len: p_t + half_len]
 
         if label == 0:
             if reverse_factor == 1:
@@ -126,12 +127,14 @@ class DiTingFMPGenerator:
     """
     def __init__(self, csv_hdf5_mapping_dict):
         self.name = csv_hdf5_mapping_dict['name']
-        if self.name not in ['DiTing','SCSN_FM']:
+        if self.name not in ['DiTing','SCSN_FMP']:
             print('Dataset type not Supported Yet!!!')
 
         if self.name == 'DiTing':
             csv_file = pd.read_csv(csv_hdf5_mapping_dict['csv_path'], dtype = {'key': str})
             self.csv_file  = csv_file[csv_file['p_motion'].str.contains('C') | csv_file['p_motion'].str.contains('R') | csv_file['p_motion'].str.contains('U') | csv_file['p_motion'].str.contains('D')]
+        elif self.name == 'SCSN_FMP':
+            self.csv_file = np.arange(2353000)
         self.has_parts = csv_hdf5_mapping_dict['has_parts']
         self.hdf5_path = csv_hdf5_mapping_dict['hdf5_path']
 
@@ -142,40 +145,52 @@ class DiTingFMPGenerator:
         self.duplicate_num = csv_hdf5_mapping_dict['duplicate_num']
 
     def __call__(self):
-        # shuffle
-        indexes = np.arange(len(self.csv_file))
-        #while True:
-        shuffle(indexes)
-        
-        for idx in range(0,len(indexes)):
-            if self.name == 'DiTing':
-                choice_id = indexes[idx]
-                choice_line = self.csv_file.iloc[choice_id]
-                part = choice_line['part']
-                key = choice_line['key']
-                key_correct = key.split('.')
-                key = key_correct[0].rjust(6,'0') + '.' + key_correct[1].ljust(4,'0')
-                # 2 x phase label upsample
-                p_t = choice_line['p_pick']*2
-                motin = choice_line['p_motion']
-                sharpness = choice_line['p_clarity']
+        while True:
+            # shuffle
+            indexes = np.arange(len(self.csv_file))
+            #while True:
+            shuffle(indexes)
+            
+            for idx in range(0,len(indexes)):
+                if self.name == 'DiTing':
+                    choice_id = indexes[idx]
+                    choice_line = self.csv_file.iloc[choice_id]
+                    part = choice_line['part']
+                    key = choice_line['key']
+                    key_correct = key.split('.')
+                    key = key_correct[0].rjust(6,'0') + '.' + key_correct[1].ljust(4,'0')
+                    # 2 x phase label upsample
+                    p_t = choice_line['p_pick']*2
+                    motin = choice_line['p_motion']
+                    sharpness = choice_line['p_clarity']
 
-                X, Y = get_instance_for_FirstMotionPolarity_training(dataset_name=self.name,
-                                                dataset_path=self.hdf5_path,
-                                                data_length = self.length,
-                                                part = part,
-                                                key = key,
-                                                motion = motin,
-                                                sharpness = sharpness,
-                                                P = p_t)
+                    X, Y = get_instance_for_FirstMotionPolarity_training(dataset_name=self.name,
+                                                    dataset_path=self.hdf5_path,
+                                                    data_length = self.length,
+                                                    part = part,
+                                                    key = key,
+                                                    motion = motin,
+                                                    sharpness = sharpness,
+                                                    P = p_t)
 
-                Y_dict = dict()
-                for type_dx in range(self.n_predvar):
-                    for dup_dx in range(self.duplicate_num):
-                        Y_dict['T{}D{}'.format(type_dx,dup_dx)] = Y[type_dx,:]
-                yield X, Y_dict
-            else:
-                pass
+                    Y_dict = dict()
+                    for type_dx in range(self.n_predvar):
+                        for dup_dx in range(self.duplicate_num):
+                            Y_dict['T{}D{}'.format(type_dx,dup_dx)] = Y[type_dx,:]
+                    yield X, Y_dict
+                elif self.name == 'SCSN_FMP':
+                    choice_id = indexes[idx]
+                    X, Y = get_instance_for_FirstMotionPolarity_training(dataset_name=self.name,
+                                                    dataset_path=self.hdf5_path,
+                                                    data_length = self.length,
+                                                    key = choice_id)
+                    Y_dict = dict()
+                    for type_dx in range(self.n_predvar):
+                        for dup_dx in range(self.duplicate_num):
+                            Y_dict['T{}D{}'.format(type_dx,dup_dx)] = Y[type_dx,:]
+                    yield X, Y_dict
+                else:
+                    pass
 
 ####################################################
 # Functions for creating final training dataset

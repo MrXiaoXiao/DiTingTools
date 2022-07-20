@@ -313,6 +313,7 @@ def get_simple_misguide(noise_length, misguide_width_min = 10, misguide_width_ma
             noise_data /= np.max(np.abs(noise_data))
             noise_factor = np.random.uniform(low=0,high=0.3)
             misguide_data[:,idx] += noise_data*noise_factor
+    
     return misguide_data
 
 ####################################################
@@ -367,7 +368,14 @@ def get_shifted_instance_for_EqDetPhasePicking_training(dataset_name = 'DiTing',
         
     shift_sample = np.random.randint(low=(P-origin_shift)*(-1) + 1, high=data_length - S + origin_shift - 2)
     temp_data_X = np.roll(temp_data_X, shift_sample, axis=0)
-
+    # STD normalization here
+    for chdx in range(3):
+        temp_data_X[:,chdx] -= np.mean(temp_data_X[:,chdx])
+        norm_factor = np.std(temp_data_X[:,chdx])
+        if norm_factor == 0:
+            pass
+        else:
+            temp_data_X[:,chdx] /= norm_factor
     # create label
     label_P, label_S, label_D = label_EqDetPick(P - origin_shift, S - origin_shift, data_length, shift = shift_sample, label_length = label_length)
     temp_data_Y[:,0] = label_P[:]
