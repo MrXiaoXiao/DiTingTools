@@ -36,7 +36,7 @@ More examples will be updated in the future.
 
 ### Dependencies [运行环境]
 
-* tensorflow == 2.2.0
+* tensorflow >= 2
 * keras == 2.4.3
 * obspy
 * scipy
@@ -72,6 +72,6 @@ GPLv3.0
 
 ## Citation
 
-We will upload a pre-print around Augest 2022, please check back then.
+We will upload a pre-print before the end of Augest 2022, please check back then.
 
-我们大概会在8月份上传一个pre-print以供引用，请届时再回来看下。[最近太忙了X_X]
+我们大概会在8月底之前上传一个pre-print以供引用，请届时再回来看下。[最近太忙了X_X]
