@@ -72,6 +72,6 @@ GPLv3.0
 
 ## Citation
 
-We will upload a pre-print before the end of Augest 2022, please check back then.
+We will upload a pre-print before the end of September 2022, please check back then.
 
-我们大概会在8月底之前上传一个pre-print以供引用，请届时再回来看下。[最近太忙了X_X]
+我们大概会在9月底之前上传一个pre-print以供引用，请届时再回来看下。[最近太忙了X_X]
