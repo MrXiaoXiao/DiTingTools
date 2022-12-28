@@ -32,6 +32,10 @@ Right now, there are several example notebooks:
 
 (5) 如何使用DiTingTools训练一个震级估算模型。
 
+(6) 如何使用训练好的DiTingPicker及DiTingMotion处理连续数据. 执行程序可以下载例子数据以及获得结果，也可通过链接下载：https://drive.google.com/file/d/1y3SZMP4ncEWX3qfgmPV3-CGSb2XYp0Qh/view?usp=sharing
+
+(6) How to use pre-trained DiTingPicker and DiTingMotion for continous data. The example data and results can be obtained by runing the codes. You may also download them from: https://drive.google.com/file/d/1y3SZMP4ncEWX3qfgmPV3-CGSb2XYp0Qh/view?usp=sharing
+
 More examples will be updated in the future.
 
 ### Dependencies [运行环境]
@@ -64,7 +68,8 @@ The continuous development of DiTingTools is going to be a challenging long-term
 
 ## Version History
 
--- To be updated
+2022.07：Codes for training on DiTing, STEAD, and INSTANCE dataset combined.
+2022.12: Update DiTingPicker demo model used for 2022 M=6.8 Luding, Sichuan earthquake sequence case.
 
 ## License
 
@@ -72,6 +77,6 @@ GPLv3.0
 
 ## Citation
 
-We will upload a pre-print before the end of Nov. 2022, please check back then.
+We will upload a pre-print around eartly 2023, please check back then.
 
-我们大概会在11月底之前上传一个pre-print以供引用，请届时再回来看下。
+大概会在23年初上传一个pre-print以供引用（最近太懒了），请届时再回来看下。
