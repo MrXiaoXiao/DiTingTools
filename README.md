@@ -68,8 +68,9 @@ The continuous development of DiTingTools is going to be a challenging long-term
 
 ## Version History
 
-2022.07：Codes for training on DiTing, STEAD, and INSTANCE dataset combined.
-2022.12: Update DiTingPicker demo model used for 2022 M=6.8 Luding, Sichuan earthquake sequence case.
+demo - 2022.07：Codes for training on DiTing, STEAD, and INSTANCE dataset combined.
+
+v0.0.2 - 2022.12: Update DiTingPicker demo model used for 2022 M=6.8 Luding, Sichuan earthquake sequence case.
 
 ## License
 
